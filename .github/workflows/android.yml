@@ -15,10 +15,8 @@ jobs:
     timeout-minutes: 120
 
     env:
-      # Mantém tudo consistente (buildozer/p4a olham para essas vars)
       ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
       ANDROID_HOME: /usr/local/lib/android/sdk
-      # Evita downloads repetidos de algumas coisas
       PIP_DISABLE_PIP_VERSION_CHECK: "1"
       PYTHONUNBUFFERED: "1"
 
@@ -26,26 +24,20 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # Python fixo (evita diferenças do /usr/bin/python3)
       - name: Set up Python 3.10
         uses: actions/setup-python@v5
         with:
           python-version: "3.10"
 
-
-      # sdkmanager (cmdline-tools) requer JDK 17+
       - name: Set up Java 17
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: "17"
-          cache: gradle
 
-      # Instala/ajusta Android SDK + cmdline-tools + sdkmanager
-      - name: Set up Android SDK
+      - name: Set up Android SDK (sdkmanager)
         uses: android-actions/setup-android@v3
 
-      # Dependências nativas para compilar python/kivy/p4a (mais completo)
       - name: Install system dependencies
         run: |
           sudo apt update
@@ -61,8 +53,8 @@ jobs:
             libgl1-mesa-dev libgles2-mesa-dev \
             ant
 
-      # Cache do buildozer/p4a para acelerar e diminuir risco de falha em rebuild
-      - name: Cache Buildozer
+      # Cache REAL que ajuda em buildozer/p4a (não depende de requirements/gradle)
+      - name: Cache Buildozer (p4a/SDK downloads)
         uses: actions/cache@v4
         with:
           path: |
@@ -77,40 +69,26 @@ jobs:
           python -m pip install --upgrade pip setuptools wheel
           python -m pip install cython==0.29.36 buildozer python-for-android
 
-      - name: Diagnostics (versions and paths)
+      - name: Diagnostics
         run: |
           echo "=== Python ==="
           which python
           python --version
-          python -m pip --version
           echo "=== Java ==="
           java -version
           echo "JAVA_HOME=$JAVA_HOME"
           echo "=== Android SDK ==="
           echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT"
-          echo "ANDROID_HOME=$ANDROID_HOME"
-          ls -la "$ANDROID_SDK_ROOT" || true
-          echo "sdkmanager location:"
-          which sdkmanager || true
-          sdkmanager --version || true
+          which sdkmanager
+          sdkmanager --version
           echo "=== Buildozer ==="
           buildozer --version
-          echo "=== p4a import ==="
-          python -c "import pythonforandroid; print('python-for-android OK')"
 
-      # Aceita licenças e instala exatamente os pacotes que evitam AIDL/build-tools missing
-      - name: Accept licenses + install SDK packages
+      - name: Accept licenses + install required SDK packages
         run: |
           yes | sdkmanager --licenses
           sdkmanager "platform-tools" "platforms;android-33" "build-tools;33.0.2"
 
-      # (Opcional) mostra o que instalou
-      - name: List installed SDK packages
-        run: |
-          sdkmanager --list_installed || true
-          ls -la "$ANDROID_SDK_ROOT/build-tools" || true
-
-      # Build (não uso clean para não quebrar cache; se quiser clean, adicione manualmente)
       - name: Build APK (debug)
         run: |
           buildozer -v android debug
@@ -119,6 +97,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: todoapp-apk
-          path: |
-            bin/*.apk
+          path: bin/*.apk
           if-no-files-found: error
