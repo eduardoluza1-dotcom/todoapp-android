@@ -54,3 +54,4 @@ jobs:
         with:
           name: todoapp-apk
           path: bin/*.apk
+
