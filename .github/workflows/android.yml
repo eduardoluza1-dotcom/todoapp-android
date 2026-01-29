@@ -2,6 +2,8 @@ name: Build Android APK
 
 on:
   workflow_dispatch:
+  push:
+    branches: [ "main" ]
 
 jobs:
   build:
@@ -11,21 +13,40 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
       - name: Install system dependencies
         run: |
           sudo apt update
-          sudo apt install -y python3 python3-pip git zip unzip openjdk-17-jdk \
-            autoconf automake libtool pkg-config zlib1g-dev libncurses5-dev \
-            libncursesw5-dev libtinfo6 cmake libffi-dev libssl-dev ant
+          sudo apt install -y \
+            zip unzip git openjdk-17-jdk \
+            autoconf automake libtool pkg-config \
+            build-essential ccache \
+            zlib1g-dev libncurses5-dev libncursesw5-dev libtinfo6 \
+            cmake libffi-dev libssl-dev \
+            liblzma-dev libsqlite3-dev libgdbm-dev libgdbm-compat-dev \
+            libbz2-dev libreadline-dev \
+            libjpeg-dev libpng-dev \
+            libgl1-mesa-dev libgles2-mesa-dev \
+            ant
 
-      - name: Install Python dependencies
+      - name: Install Buildozer + python-for-android
         run: |
-          python3 -m pip install --upgrade pip
-          python3 -m pip install cython==0.29.36 buildozer
+          python -m pip install --upgrade pip
+          python -m pip install cython==0.29.36 buildozer python-for-android
+
+      - name: Show versions
+        run: |
+          which python
+          python --version
+          buildozer --version
+          python -c "import pythonforandroid; print('python-for-android OK')"
 
       - name: Build APK
         run: |
-          buildozer android clean
           buildozer -v android debug
 
       - name: Upload APK
