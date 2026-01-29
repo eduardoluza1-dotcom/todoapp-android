@@ -18,6 +18,9 @@ jobs:
         with:
           python-version: "3.10"
 
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
       - name: Install system dependencies
         run: |
           sudo apt update
@@ -38,25 +41,9 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install cython==0.29.36 buildozer python-for-android
 
-      # ✅ ESTE PASSO RESOLVE O SEU ERRO
-      - name: Accept Android SDK licenses + install build-tools
+      - name: Accept licenses + install SDK packages
         run: |
-          # garante paths usados pelo buildozer
-          export ANDROIDSDK="$HOME/.buildozer/android/platform/android-sdk"
-          export ANDROID_SDK_ROOT="$ANDROIDSDK"
-          export ANDROID_HOME="$ANDROIDSDK"
-
-          mkdir -p "$ANDROIDSDK/cmdline-tools"
-          # buildozer baixa cmdline-tools em "tools", linkamos para "latest" (sdkmanager espera)
-          if [ -d "$ANDROIDSDK/tools" ] && [ ! -d "$ANDROIDSDK/cmdline-tools/latest" ]; then
-            mv "$ANDROIDSDK/tools" "$ANDROIDSDK/cmdline-tools/latest"
-          fi
-
-          export PATH="$ANDROIDSDK/cmdline-tools/latest/bin:$ANDROIDSDK/platform-tools:$ANDROIDSDK/emulator:$PATH"
-
           yes | sdkmanager --licenses
-
-          # instala o que o aidl precisa (build-tools)
           sdkmanager "platform-tools" "platforms;android-33" "build-tools;33.0.2"
 
       - name: Build APK
