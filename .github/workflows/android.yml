@@ -38,12 +38,26 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install cython==0.29.36 buildozer python-for-android
 
-      - name: Show versions
+      # ✅ ESTE PASSO RESOLVE O SEU ERRO
+      - name: Accept Android SDK licenses + install build-tools
         run: |
-          which python
-          python --version
-          buildozer --version
-          python -c "import pythonforandroid; print('python-for-android OK')"
+          # garante paths usados pelo buildozer
+          export ANDROIDSDK="$HOME/.buildozer/android/platform/android-sdk"
+          export ANDROID_SDK_ROOT="$ANDROIDSDK"
+          export ANDROID_HOME="$ANDROIDSDK"
+
+          mkdir -p "$ANDROIDSDK/cmdline-tools"
+          # buildozer baixa cmdline-tools em "tools", linkamos para "latest" (sdkmanager espera)
+          if [ -d "$ANDROIDSDK/tools" ] && [ ! -d "$ANDROIDSDK/cmdline-tools/latest" ]; then
+            mv "$ANDROIDSDK/tools" "$ANDROIDSDK/cmdline-tools/latest"
+          fi
+
+          export PATH="$ANDROIDSDK/cmdline-tools/latest/bin:$ANDROIDSDK/platform-tools:$ANDROIDSDK/emulator:$PATH"
+
+          yes | sdkmanager --licenses
+
+          # instala o que o aidl precisa (build-tools)
+          sdkmanager "platform-tools" "platforms;android-33" "build-tools;33.0.2"
 
       - name: Build APK
         run: |
@@ -54,4 +68,3 @@ jobs:
         with:
           name: todoapp-apk
           path: bin/*.apk
-
